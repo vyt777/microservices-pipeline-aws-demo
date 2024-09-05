@@ -4,7 +4,7 @@
 This project demonstrates a microservices architecture pipeline for managing client data using technologies like Python, Go, Kafka, gRPC, AWS Lambda, Redis, PostgreSQL, and DynamoDB. The core functionality involves handling and storing client information in AWS DynamoDB and PostgreSQL, leveraging a variety of modern tools with Terraform for AWS EC2 deployment (t2.micro). CI/CD is managed through GitHub Actions.
 
 ## Purpose
-This demo project showcases a complex architecture to serve as a **framework** for building scalable and maintainable microservices applications. While a simple client data storage task could be done with a single Python service and a local DynamoDB/PostgreSQL setup, this project illustrates how microservices interact with distributed components, offering a reusable skeleton for more advanced features such as authentication, analytics, and additional services.
+This demo project intentionally showcases a complex architecture to serve as a **framework** or an **example** for building scalable, high-load, and maintainable microservices applications. While a simple client data storage task (used in this project) could be done with a single Python service and a local DynamoDB/PostgreSQL setup, this project illustrates how microservices interact with distributed components, offering a reusable skeleton for more advanced features such as authentication, analytics, and additional services.
 
 ## Project Architecture
 
