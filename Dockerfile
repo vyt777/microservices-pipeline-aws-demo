@@ -42,7 +42,7 @@ ENV GO111MODULE=on
 ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin:$GOROOT/bin
 
 # Install pip dependencies
-RUN pip3 install boto3 confluent-kafka grpcio
+RUN pip3 install boto3 confluent-kafka grpcio grpcio-tools
 
 # Install Kafka
 ENV KAFKA_VERSION=3.8.0
@@ -79,7 +79,7 @@ RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest \
     && go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 # Compile the gRPC server
-RUN protoc --proto_path=./proto --go_out=. --go-grpc_out=. ./proto/get_item.proto
+RUN protoc --proto_path=../../proto --go_out=. --go-grpc_out=. ../../proto/get_item.proto
 RUN go build -o grpc_server grpc_server.go
 
 # Install grpcurl
@@ -101,6 +101,9 @@ RUN go build -o kafka_to_aws_lambda kafka_to_aws_lamdba.go
 
 # Return to working directory
 WORKDIR /app
+
+# Generate Python gRPC client from .proto
+RUN python3 -m grpc_tools.protoc -I./proto --python_out=./py --grpc_python_out=./py ./proto/get_item.proto
 
 # Set environment variables
 ENV PATH=$PATH:${KAFKA_HOME}/bin

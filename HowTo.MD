@@ -23,12 +23,13 @@ echo ruok | nc localhost 2181
 ```
 #### Kafka Commands
 ```bash
-$KAFKA_HOME/bin/kafka-topics.sh --create --topic test --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+$KAFKA_HOME/bin/kafka-topics.sh --create --topic create_clients --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
 $KAFKA_HOME/bin/kafka-topics.sh --list --bootstrap-server localhost:9092
-$KAFKA_HOME/bin/kafka-console-producer.sh --topic test --bootstrap-server localhost:9092
+$KAFKA_HOME/bin/kafka-console-producer.sh --topic create_clients --bootstrap-server localhost:9092
 echo "Hello Kafka!" | $KAFKA_HOME/bin/kafka-console-producer.sh --topic test --bootstrap-server localhost:9092 > /dev/null
-$KAFKA_HOME/bin/kafka-console-consumer.sh --topic test --from-beginning --bootstrap-server localhost:9092
-$KAFKA_HOME/bin/kafka-topics.sh --describe --topic test --bootstrap-server localhost:9092
+$KAFKA_HOME/bin/kafka-console-consumer.sh --topic create_clients --from-beginning --bootstrap-server localhost:9092
+$KAFKA_HOME/bin/kafka-console-consumer.sh --topic update_clients --from-beginning --bootstrap-server localhost:9092
+$KAFKA_HOME/bin/kafka-topics.sh --describe --topic create_clients --bootstrap-server localhost:9092
 $KAFKA_HOME/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --list
 $KAFKA_HOME/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group go-consumer-group
 ```
