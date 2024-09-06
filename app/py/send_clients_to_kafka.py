@@ -64,7 +64,7 @@ async def send_update_request(person):
 async def send_get_request(grpc_stub, person_id):
     """Function to handle "get" requests using gRPC"""
     print('Sending "get" request...')
-    request = get_item_pb2.GetItemRequest(id=person_id)
+    request = get_item_pb2.GetItemRequest(item_id=person_id)
     response = grpc_stub.GetItem(request)
     print(f'Received data: {response.item}')
 
@@ -84,9 +84,9 @@ async def main():
     ]
     await asyncio.gather(*(send_create_request(client) for client in clients_to_create))
 
-    # # Get created clients
-    # client_ids_to_get = ['1', '2', '3', '4', '5']
-    # await asyncio.gather(*(send_get_request(grpc_stub, client_id) for client_id in client_ids_to_get))
+    # Get created clients
+    client_ids_to_get = ['1', '2', '3', '4', '5']
+    await asyncio.gather(*(send_get_request(grpc_stub, client_id) for client_id in client_ids_to_get))
 
     # Update clients
     clients_to_update = [
@@ -98,8 +98,8 @@ async def main():
     ]
     await asyncio.gather(*(send_update_request(client) for client in clients_to_update))
 
-    # # Get updated clients
-    # await asyncio.gather(*(send_get_request(grpc_stub, client_id) for client_id in client_ids_to_get))
+    # Get updated clients
+    await asyncio.gather(*(send_get_request(grpc_stub, client_id) for client_id in client_ids_to_get))
 
 
 if __name__ == "__main__":
