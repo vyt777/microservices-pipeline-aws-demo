@@ -72,3 +72,11 @@ cat ~/.aws/c*
 cat ./app/.env 
 TF_VAR_kms_key_arn=arn:aws:kms...
 ```
+
+### Check logs
+```bash
+tail -f /var/log/zookeeper.log
+tail -f /var/log/kafka.log
+tail -f /var/log/grpc_server.log
+tail -f /var/log/kafka_to_aws_lambda.log
+```
