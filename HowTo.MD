@@ -75,7 +75,7 @@ chmod 400 /path/to/your-key.pem
 ssh -i /path/to/your-key.pem ubuntu@ec2-54-174-139-195.compute-1.amazonaws.com
 ```
 
-Update the remote AWS Ubuntu instance security group rules to open 6378 Redis port
+Update the remote AWS Ubuntu instance security group rules to open 6379 Redis port
 https://us-east-1.console.aws.amazon.com/ec2/home?region=us-east-1#SecurityGroup:group-id=sg-05f550060decbf6d0
 
 Install and enable Docker on the remote AWS Ubuntu instance
@@ -117,6 +117,11 @@ Check open ports in the AWS Ubuntu instance (Redis should listen 6379)
 ```bash
 sudo netstat -tuln
 ss -tuln
+```
+
+Check access to Redis port from local PC
+```bash
+nc -zv ec2-54-174-139-195.compute-1.amazonaws.com 6379
 ```
 
 #### Check your external IP
