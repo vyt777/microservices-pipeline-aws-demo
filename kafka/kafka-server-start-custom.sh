@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Set Kafka memory limitation
+export KAFKA_HEAP_OPTS="-Xmx256M -Xms256M"
+
 # Create Kafka topic
 $KAFKA_HOME/bin/kafka-topics.sh --create --topic create_clients --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1 > $KAFKA_HOME/logs/kafka.log 2>&1 &
 $KAFKA_HOME/bin/kafka-topics.sh --create --topic update_clients --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1 > $KAFKA_HOME/logs/kafka.log 2>&1 &

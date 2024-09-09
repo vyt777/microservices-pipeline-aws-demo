@@ -66,6 +66,63 @@ aws configure
 aws sts get-caller-identity
 cat ~/.aws/c*
 ```
+#### Setup EC2
+Launch Ubuntu instance https://us-east-1.console.aws.amazon.com/ec2/home?region=us-east-1#Home: with "my-ip" security group rule
+
+Update permissions to your key and ssh-in into the remote AWS Ubuntu instance
+```bash
+chmod 400 /path/to/your-key.pem
+ssh -i /path/to/your-key.pem ubuntu@ec2-54-174-139-195.compute-1.amazonaws.com
+```
+
+Update the remote AWS Ubuntu instance security group rules to open 6378 Redis port
+https://us-east-1.console.aws.amazon.com/ec2/home?region=us-east-1#SecurityGroup:group-id=sg-05f550060decbf6d0
+
+Install and enable Docker on the remote AWS Ubuntu instance
+```bash
+sudo apt update
+sudo apt install docker.io
+sudo systemctl start docker
+sudo systemctl enable docker
+```
+
+#### Upload Docker image on AWS via Docker Hub
+Register yourself on Docker Hub https://hub.docker.com/
+
+Build the image and push to Docker Hub
+```bash
+docker login
+sudo docker build -t pipeline-aws-image . --progress=plain
+docker tag pipeline-aws-image denforlight/pipeline-aws-image:latest
+docker push denforlight/pipeline-aws-image:latest
+```
+
+The image is accessible here now:
+https://hub.docker.com/repository/docker/denforlight/pipeline-aws-image/general
+
+SSH-in to the AWS Ubuntu instance, pull the image and run it
+```bash
+ssh -i /path/to/your-key.pem ubuntu@ec2-54-174-139-195.compute-1.amazonaws.com
+sudo usermod -aG docker ubuntu
+newgrp docker
+docker login
+docker stop pipeline-aws-container; docker rm pipeline-aws-container; docker rmi $(docker images -q)
+docker images
+docker pull denforlight/pipeline-aws-image:latest
+docker run -d -p 6379:6379 --name pipeline-aws-container denforlight/pipeline-aws-image:latest
+docker exec -it pipeline-aws-container /bin/bash
+```
+
+Check open ports in the AWS Ubuntu instance (Redis should listen 6379)
+```bash
+sudo netstat -tuln
+ss -tuln
+```
+
+#### Check your external IP
+```bash
+curl ifconfig.me
+```
 
 ### Keep environment variables in the .env file:
 ```bash
@@ -75,8 +132,8 @@ TF_VAR_kms_key_arn=arn:aws:kms...
 
 ### Check logs
 ```bash
-tail -f /var/log/zookeeper.log
-tail -f /var/log/kafka.log
-tail -f /var/log/grpc_server.log
-tail -f /var/log/kafka_to_aws_lambda.log
+cat /var/log/zookeeper.log
+cat /var/log/kafka.log
+cat /var/log/grpc_server.log
+cat /var/log/kafka_to_aws_lambda.log
 ```

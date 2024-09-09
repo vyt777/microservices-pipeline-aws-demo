@@ -113,6 +113,9 @@ ENV PYTHONUNBUFFERED=1
 RUN chmod +x ${KAFKA_HOME}/kafka-server-start-custom.sh \
     && mkdir -p $KAFKA_HOME/logs
 
+# Expose Redis port for external access
+EXPOSE 6379
+
 # Start Kafka, Zookeeper, Redis, gRPC server, and keep the container alive
 CMD ["/bin/sh", "-c", "${KAFKA_HOME}/kafka-server-start-custom.sh & \
                       redis-server --daemonize yes && \
