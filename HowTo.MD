@@ -7,6 +7,7 @@ sudo docker build -t pipeline-aws-image .
 sudo docker build -t pipeline-aws-image . --progress=plain --no-cache
 docker stop pipeline-aws-container; docker rm pipeline-aws-container; sudo docker build -t pipeline-aws-image . --progress=plain
 ```
+
 #### Run Docker Container
 ```bash
 sudo docker run --env-file app/.env \
@@ -21,6 +22,7 @@ docker exec -it pipeline-aws-container /bin/bash
 ```bash
 echo ruok | nc localhost 2181
 ```
+
 #### Kafka Commands
 ```bash
 $KAFKA_HOME/bin/kafka-topics.sh --create --topic create_clients --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
@@ -46,26 +48,28 @@ grpcurl -plaintext localhost:50051 getitem.GetItemService/GetItem -d '{"id": "ex
 netstat -tuln | grep 50051
 ```
 
-### Terraform Commands
-```bash
-terraform init
-terraform validate
-terraform plan
-terraform apply
-```
+### Add AWS User EC2, IAM, DynamoDB rights
+https://us-east-1.console.aws.amazon.com/iam/home?region=us-east-1#/users/details/Denis?section=permissions
+Add Permissions => Attach existing policies directly:
+- AmazonEC2FullAccess
+- IAMFullAccess
+- AmazonDynamoDBFullAccess 
 
 ### AWS Setup Commands
 #### AWS User Permissions
 https://us-east-1.console.aws.amazon.com/iam/home?region=us-east-1#/users/details/Denis?section=permissions
+
 #### Configure AWS
 ```bash
 aws configure
 ```
-#### Check AWS Credentials in Container
+
+#### Check AWS Credentials in Docker container
 ```bash
 aws sts get-caller-identity
 cat ~/.aws/c*
 ```
+
 #### Setup EC2
 Launch Ubuntu instance https://us-east-1.console.aws.amazon.com/ec2/home?region=us-east-1#Home: with "my-ip" security group rule
 
@@ -75,8 +79,21 @@ chmod 400 /path/to/your-key.pem
 ssh -i /path/to/your-key.pem ubuntu@ec2-54-174-139-195.compute-1.amazonaws.com
 ```
 
+Turn off auto-updates
+```bash
+sudo vim /etc/apt/apt.conf.d/20auto-upgrades
+```
+
+Make sure both settings set to 0:
+```text
+APT::Periodic::Update-Package-Lists "0";
+APT::Periodic::Unattended-Upgrade "0";
+```
+
 Update the remote AWS Ubuntu instance security group rules to open 6379 Redis port
+Update the remote AWS Ubuntu instance security group rules to open allow incoming requests to 6379 Redis port from Source of your VPC (IPv4 CIDR): 172.31.0.0/16
 https://us-east-1.console.aws.amazon.com/ec2/home?region=us-east-1#SecurityGroup:group-id=sg-05f550060decbf6d0
+
 
 Install and enable Docker on the remote AWS Ubuntu instance
 ```bash
@@ -119,10 +136,57 @@ sudo netstat -tuln
 ss -tuln
 ```
 
-Check access to Redis port from local PC
+Check access to Redis port from local PC and ping it
 ```bash
 nc -zv ec2-54-174-139-195.compute-1.amazonaws.com 6379
+redis-cli -h ec2-54-174-139-195.compute-1.amazonaws.com -p 6379 ping
 ```
+
+### Terraform Commands
+```bash
+sudo apt-get update && sudo apt-get install -y gnupg software-properties-common curl
+curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+sudo apt-get update && sudo apt-get install terraform
+cd microservices-pipeline-aws-demo/app/py
+zip lambda_kafka_to_dynamodb.zip lambda_kafka_to_dynamodb.py
+cd ..
+terraform state rm aws_instance.redis_instance
+terraform import aws_instance.redis_instance i-03e43a709b7bdca03
+terraform init
+terraform validate
+terraform plan
+terraform apply
+```
+
+### Check AWS services after applying Terraform
+Check Dynamodb tables from local PC
+```bash
+aws dynamodb list-tables
+```
+Check Dynamodb tables from local PC
+```bash
+aws lambda list-functions
+```
+Check EC2 instances from local PC
+```bash
+aws ec2 describe-instances --filters "Name=instance-state-name,Values=running"
+```
+
+#### Watch logs, traffic, cost 
+Create VPC logs flow
+https://us-east-1.console.aws.amazon.com/vpcconsole/home?region=us-east-1#vpcs:
+Actions => Create Flow Log
+
+Watch traffic volume via CloudWatch
+https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#metricsV2?graph=~(metrics~(~(~'AWS*2fEC2~'NetworkPacketsOut~'InstanceId~'i-03e43a709b7bdca03)~(~'.~'NetworkPacketsIn~'.~'.))~view~'timeSeries~stacked~false~region~'us-east-1~stat~'Average~period~60~start~'-PT1H~end~'P0D)&query=~'*7bAWS*2fEC2*2cInstanceId*7d
+
+Watch billing and cost 
+https://us-east-1.console.aws.amazon.com/costmanagement/home#/home
+https://us-east-1.console.aws.amazon.com/billing/home#/freetier
+
+See EC2 instances in all regions
+https://us-east-1.console.aws.amazon.com/ec2globalview/home?region=us-east-1#
 
 #### Check your external IP
 ```bash
@@ -135,7 +199,7 @@ cat ./app/.env
 TF_VAR_kms_key_arn=arn:aws:kms...
 ```
 
-### Check logs
+### Check logs in Docker container
 ```bash
 cat /var/log/zookeeper.log
 cat /var/log/kafka.log
