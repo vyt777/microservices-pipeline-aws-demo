@@ -118,7 +118,9 @@ EXPOSE 6379
 
 # Start Kafka, Zookeeper, Redis, gRPC server, and keep the container alive
 CMD ["/bin/sh", "-c", "${KAFKA_HOME}/kafka-server-start-custom.sh & \
-                      redis-server --daemonize yes && \
+                      redis-server --logfile /var/log/redis.log --daemonize yes --maxmemory 128mb --maxmemory-policy allkeys-lru && \
+                      while ! nc -z localhost 6379; do sleep 1; done && \
+                      redis-cli -p 6379 CONFIG SET protected-mode no && \
                       /app/go/grpc_server/grpc_server > /var/log/grpc_server.log 2>&1 & \
                       while ! nc -z localhost 9092; do sleep 1; done && \
                       /app/go/kafka_to_aws_lamdba/kafka_to_aws_lambda > /var/log/kafka_to_aws_lambda.log 2>&1 & \

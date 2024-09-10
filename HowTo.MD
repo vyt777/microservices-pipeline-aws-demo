@@ -39,6 +39,7 @@ $KAFKA_HOME/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --des
 ### Redis Commands
 ```bash
 redis-cli ping
+redis-cli -p 6379 INFO memory
 ```
 
 ### gRPC Commands 
@@ -205,4 +206,5 @@ cat /var/log/zookeeper.log
 cat /var/log/kafka.log
 cat /var/log/grpc_server.log
 cat /var/log/kafka_to_aws_lambda.log
+cat /var/log/redis.log
 ```
