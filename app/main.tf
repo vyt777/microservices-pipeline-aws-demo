@@ -59,11 +59,17 @@ resource "aws_iam_role_policy_attachment" "lambda_policy_attachment" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+# Attach policy for DynamoDB Full Access
+resource "aws_iam_role_policy_attachment" "lambda_dynamodb_access" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
+}
+
 # Lambda function configuration with VPC and dynamic subnet and security group
 resource "aws_lambda_function" "client_lambda" {
   function_name = "ClientManagementFunction"
   runtime       = "python3.10"
-  handler       = "lambda_function.lambda_handler"
+  handler       = "lambda_kafka_to_dynamodb.lambda_handler"
   role          = aws_iam_role.lambda_exec.arn
   filename      = "${path.module}/py/lambda_kafka_to_dynamodb.zip"
 
@@ -75,9 +81,22 @@ resource "aws_lambda_function" "client_lambda" {
     }
   }
 
+  timeout = 5
+
   vpc_config {
     subnet_ids         = [data.aws_subnet.existing_subnet.id]
     security_group_ids = [data.aws_security_group.existing_security_group.id]
+  }
+}
+
+# Force the update by triggering on file hash changes
+resource "null_resource" "lambda_update" {
+  provisioner "local-exec" {
+    command = "aws lambda update-function-code --function-name ClientManagementFunction --zip-file fileb://${path.module}/py/lambda_kafka_to_dynamodb.zip"
+  }
+
+  triggers = {
+    file_hash = filesha256("${path.module}/py/lambda_kafka_to_dynamodb.zip")
   }
 }
 
@@ -103,5 +122,18 @@ resource "aws_dynamodb_table" "clients" {
   attribute {
     name = "id"
     type = "S"
+  }
+}
+
+# Setup VPC Gateway Endpoint to connect Lambda (which is in VPC) and DynamoDB
+resource "aws_vpc_endpoint" "dynamodb_gateway" {
+  vpc_id       = "vpc-02c6973e498a1240d"
+  service_name = "com.amazonaws.us-east-1.dynamodb"
+  vpc_endpoint_type = "Gateway"
+
+  route_table_ids = ["rtb-0d162cc66b86bcb2e"]
+
+  tags = {
+    Name = "DynamoDBGatewayEndpoint"
   }
 }

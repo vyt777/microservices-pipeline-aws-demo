@@ -52,9 +52,14 @@ netstat -tuln | grep 50051
 ### Add AWS User EC2, IAM, DynamoDB rights
 https://us-east-1.console.aws.amazon.com/iam/home?region=us-east-1#/users/details/Denis?section=permissions
 Add Permissions => Attach existing policies directly:
-- AmazonEC2FullAccess
 - IAMFullAccess
+- AmazonEC2FullAccess
 - AmazonDynamoDBFullAccess 
+- AWSLambda_FullAccess
+- AWSLambdaExecute
+- AWSLambdaInvocation-DynamoDB
+- AWSLambdaRole
+- CloudWatchLogsFullAccess
 
 ### AWS Setup Commands
 #### AWS User Permissions
@@ -150,24 +155,41 @@ curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
 sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
 sudo apt-get update && sudo apt-get install terraform
 cd microservices-pipeline-aws-demo/app/py
-zip lambda_kafka_to_dynamodb.zip lambda_kafka_to_dynamodb.py
-cd ..
+mkdir lambda_temp
+cd lambda_temp
+cp ../lambda_kafka_to_dynamodb.py ./
+pip install redis -t ./
+rm -rf *dist-info
+zip -r ../lambda_kafka_to_dynamodb.zip .
+cd ../..
 terraform state rm aws_instance.redis_instance
 terraform import aws_instance.redis_instance i-03e43a709b7bdca03
+terraform import aws_vpc_endpoint.dynamodb_gateway vpce-0821588255b515ba1
 terraform init
 terraform validate
 terraform plan
-terraform apply
+terraform apply -auto-approve
 ```
 
 ### Check AWS services after applying Terraform
 Check Dynamodb tables from local PC
 ```bash
 aws dynamodb list-tables
+aws dynamodb describe-table --table-name Clients
+aws dynamodb put-item \
+    --table-name Clients \
+    --item '{
+        "id": {"S": "test"},
+        "name": {"S": "John Doe"},
+        "email": {"S": "john.doe@example.com"}
+    }'
+aws dynamodb get-item     --table-name Clients     --key '{"id": {"S": "test"}}'
 ```
-Check Dynamodb tables from local PC
+Check Lambda from local PC
 ```bash
 aws lambda list-functions
+aws lambda invoke --function-name ClientManagementFunction --cli-binary-format raw-in-base64-out --payload '{"action": "get", "id": "test"}' /dev/stdout
+aws logs tail /aws/lambda/ClientManagementFunction --follow
 ```
 Check EC2 instances from local PC
 ```bash
