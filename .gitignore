@@ -5,3 +5,5 @@ app/py/lambda_kafka_to_dynamodb.zip
 app/.terraform*
 app/terraform*
 microservices-pipeline-aws-demo-key-pair.pem
+app/py/venv
+app/py/__pycache__

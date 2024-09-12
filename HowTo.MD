@@ -131,9 +131,13 @@ newgrp docker
 docker login
 docker stop pipeline-aws-container; docker rm pipeline-aws-container; docker rmi $(docker images -q)
 docker images
+docker info
+docker image prune -f
+docker system prune -f
 docker pull denforlight/pipeline-aws-image:latest
 docker run -d -p 6379:6379 --name pipeline-aws-container denforlight/pipeline-aws-image:latest
 docker exec -it pipeline-aws-container /bin/bash
+env | grep AWS
 ```
 
 Check open ports in the AWS Ubuntu instance (Redis should listen 6379)
