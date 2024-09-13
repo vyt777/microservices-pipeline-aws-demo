@@ -4,15 +4,17 @@ package get_item;
 
 option go_package = "./proto"; 
 
-service GetItemService { 
-    rpc GetItem(GetItemRequest) returns (GetItemResponse) {}
+service GetClientService {
+    rpc GetClient(GetClientRequest) returns (GetClientResponse) {}
 }
 
-message GetItemRequest {
-    string item_id = 1;  
+message GetClientRequest {
+    string id = 1;
 }
 
-message GetItemResponse {
-    string item_id = 1;  
-    string item_name = 2; 
+message GetClientResponse {
+    string id = 1;
+    string first_name = 2;
+    string second_name = 3;
+    string phone = 4;
 }

@@ -115,7 +115,11 @@ Register yourself on Docker Hub https://hub.docker.com/
 Build the image and push to Docker Hub
 ```bash
 docker login
-sudo docker build -t pipeline-aws-image . --progress=plain
+docker build --build-arg AWS_ACCESS_KEY_ID=$(grep 'aws_access_key_id' ~/.aws/credentials | awk '{print $3}') \
+             --build-arg AWS_SECRET_ACCESS_KEY=$(grep 'aws_secret_access_key' ~/.aws/credentials | awk '{print $3}') \
+             --build-arg AWS_DEFAULT_REGION=$(grep 'region' ~/.aws/config | awk '{print $3}') \
+             -t pipeline-aws-image . --progress=plain
+
 docker tag pipeline-aws-image denforlight/pipeline-aws-image:latest
 docker push denforlight/pipeline-aws-image:latest
 ```
@@ -184,8 +188,9 @@ aws dynamodb put-item \
     --table-name Clients \
     --item '{
         "id": {"S": "test"},
-        "name": {"S": "John Doe"},
-        "email": {"S": "john.doe@example.com"}
+        "first_name": {"S": "John"},
+        "second_name": {"S": "Doe"},
+        "phone": {"S": "555-1234"}
     }'
 aws dynamodb get-item     --table-name Clients     --key '{"id": {"S": "test"}}'
 ```

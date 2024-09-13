@@ -29,77 +29,77 @@ EXTENDED_TTL = 1800
 def lambda_handler(event, context):
     """Lambda handler"""
     action = event.get('action')
-    item_id = event.get('id')
+    client_id = event.get('id')
 
-    if action == 'get':
-        return get_item(item_id)
-    elif action == 'create':
-        item_data = event.get('item_data')
-        return create_item(item_id, item_data)
-    elif action == 'update':
-        item_data = event.get('item_data')
-        return update_item(item_id, item_data)
+    if action == 'get_client':
+        return get_client(client_id)
+    elif action == 'create_client':
+        client_data = event.get('client_data')
+        return create_client(client_id, client_data)
+    elif action == 'update_client':
+        client_data = event.get('client_data')
+        return update_client(client_id, client_data)
     else:
         return {'status': 'error', 'message': 'Invalid action'}
 
 
-def get_item(item_id):
-    """Get item"""
+def get_client(client_id):
+    """Get client"""
     # Attempt to get data from cache
     print('Get Redis response')
-    cached_item = redis_client.get(item_id)
-    print(f'Redis returned item: {cached_item}')
+    cached_client = redis_client.get(client_id)
+    print(f'Redis returned client: {cached_client}')
 
-    if cached_item:
+    if cached_client:
         # If data is found in cache, increment the counter and update TTL
-        redis_client.incr(f"{item_id}:count")
-        request_count = int(redis_client.get(f"{item_id}:count"))
+        redis_client.incr(f"{client_id}:count")
+        request_count = int(redis_client.get(f"{client_id}:count"))
         print(f'Redis counter for this data: {request_count}')
 
         # If request count exceeds threshold, extend TTL
         if request_count > TTL_THRESHOLD:
-            redis_client.expire(item_id, EXTENDED_TTL)
-        return json.loads(cached_item)
+            redis_client.expire(client_id, EXTENDED_TTL)
+        return json.loads(cached_client)
     else:
         # If data is not in cache, fetch it from DynamoDB
         print('Get DynamoDB response')
-        response = table.get_item(Key={'id': item_id})
+        response = table.get_item(Key={'id': client_id})
         print(f'DynamoDB response: {response}')
-        item = response.get('Item')
-        print(f'DynamoDB returned item: {item}')
+        client = response.get('Item')
+        print(f'DynamoDB returned client: {client}')
 
-        if item:
+        if client:
             # Cache the data and set TTL
-            redis_client.set(item_id, json.dumps(item))
-            redis_client.set(f"{item_id}:count", 1)
-            redis_client.expire(item_id, DEFAULT_TTL)
-        return item
+            redis_client.set(client_id, json.dumps(client))
+            redis_client.set(f"{client_id}:count", 1)
+            redis_client.expire(client_id, DEFAULT_TTL)
+        return client
 
 
-def create_item(item_id, item_data):
-    """Create item"""
+def create_client(client_id, client_data):
+    """Create client"""
     # Save data in DynamoDB
-    table.put_item(Item={'id': item_id, **item_data})
+    table.put_item(Item={'id': client_id, **client_data})
 
     # Cache the data in Redis
-    redis_client.set(item_id, json.dumps(item_data))
-    redis_client.set(f"{item_id}:count", 1)
-    redis_client.expire(item_id, DEFAULT_TTL)
+    redis_client.set(client_id, json.dumps(client_data))
+    redis_client.set(f"{client_id}:count", 1)
+    redis_client.expire(client_id, DEFAULT_TTL)
     return {'status': 'success'}
 
 
-def update_item(item_id, item_data):
-    """Update item"""
+def update_client(client_id, client_data):
+    """Update client"""
     # Update data in DynamoDB
     table.update_item(
-        Key={'id': item_id},
+        Key={'id': client_id},
         UpdateExpression="set info=:i",
-        ExpressionAttributeValues={':i': item_data},
+        ExpressionAttributeValues={':i': client_data},
         ReturnValues="UPDATED_NEW"
     )
 
     # Update data in cache
-    redis_client.set(item_id, json.dumps(item_data))
-    redis_client.delete(f"{item_id}:count")
-    redis_client.expire(item_id, DEFAULT_TTL)
+    redis_client.set(client_id, json.dumps(client_data))
+    redis_client.delete(f"{client_id}:count")
+    redis_client.expire(client_id, DEFAULT_TTL)
     return {'status': 'success'}

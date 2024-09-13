@@ -108,6 +108,12 @@ RUN python3 -m grpc_tools.protoc -I./proto --python_out=./py --grpc_python_out=.
 # Set environment variables
 ENV PATH=$PATH:${KAFKA_HOME}/bin
 ENV PYTHONUNBUFFERED=1
+ARG AWS_ACCESS_KEY_ID
+ARG AWS_SECRET_ACCESS_KEY
+ARG AWS_DEFAULT_REGION
+ENV AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+    AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+    AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
 
 # Make scripts executable
 RUN chmod +x ${KAFKA_HOME}/kafka-server-start-custom.sh \

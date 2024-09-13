@@ -9,8 +9,6 @@ import get_item_pb2, get_item_pb2_grpc
 producer = Producer({
     'bootstrap.servers': 'localhost:9092'
 })
-channel = grpc.insecure_channel('localhost:50051')
-grpc_stub = get_item_pb2_grpc.GetItemServiceStub(channel)
 create_clients_topic_name = 'create_clients'
 update_clients_topic_name = 'update_clients'
 
@@ -37,6 +35,11 @@ def check_kafka_connection():
         print(f'Failed to connect to Kafka: {e}')
         return False
 
+
+async def create_grpc_stub():
+    return get_item_pb2_grpc.GetClientServiceStub(grpc.aio.insecure_channel('localhost:50051'))
+
+
 def delivery_report(err, msg):
     """Callback function to handle delivery reports"""
     if err is not None:
@@ -45,7 +48,7 @@ def delivery_report(err, msg):
         print(f'Message delivered to {msg.topic()} [{msg.partition()}]')
 
 
-async def send_create_request(person):
+async def create_client(person):
     """Function to handle "create" requests"""
     print('Sending "create" request...')
     person_json = json.dumps(person)
@@ -53,7 +56,7 @@ async def send_create_request(person):
     producer.flush()
 
 
-async def send_update_request(person):
+async def update_client(person):
     """Function to handle "update" requests"""
     print('Sending "update" request...')
     person_json = json.dumps(person)
@@ -61,12 +64,12 @@ async def send_update_request(person):
     producer.flush()
 
 
-async def send_get_request(grpc_stub, person_id):
+async def get_client(grpc_stub, person_id):
     """Function to handle "get" requests using gRPC"""
     print('Sending "get" request...')
-    request = get_item_pb2.GetItemRequest(item_id=person_id)
-    response = grpc_stub.GetItem(request)
-    print(f'Received data: {response.item}')
+    request = get_item_pb2.GetClientRequest(id=person_id)
+    response = await grpc_stub.GetClient(request)
+    print(f'Received response: {response}')
 
 
 async def main():
@@ -74,32 +77,35 @@ async def main():
         print("Exiting due to Kafka connection failure")
         exit(1)
 
-    # Create clients
-    clients_to_create = [
-        {'First name': 'John', 'Second name': 'Doe', 'phone': '555-1234'},
-        {'First name': 'Jane', 'Second name': 'Smith', 'phone': '555-5678'},
-        {'First name': 'Jim', 'Second name': 'Beam', 'phone': '555-9876'},
-        {'First name': 'Jack', 'Second name': 'Daniels', 'phone': '555-6543'},
-        {'First name': 'Jill', 'Second name': 'Valentine', 'phone': '555-4321'}
-    ]
-    await asyncio.gather(*(send_create_request(client) for client in clients_to_create))
+    grpc_stub = await create_grpc_stub()
+
+    # # Create clients
+    # clients_to_create = [
+    #     {'first_name': 'John', 'second_name': 'Doe', 'phone': '555-1234'},
+    #     {'first_name': 'Jane', 'second_name': 'Smith', 'phone': '555-5678'},
+    #     {'first_name': 'Jim', 'second_name': 'Beam', 'phone': '555-9876'},
+    #     {'first_name': 'Jack', 'second_name': 'Daniels', 'phone': '555-6543'},
+    #     {'first_name': 'Jill', 'second_name': 'Valentine', 'phone': '555-4321'}
+    # ]
+    # await asyncio.gather(*(create_client(client) for client in clients_to_create))
 
     # Get created clients
-    client_ids_to_get = ['1', '2', '3', '4', '5']
-    await asyncio.gather(*(send_get_request(grpc_stub, client_id) for client_id in client_ids_to_get))
+    # client_ids_to_get = ['1', '2', '3', '4', '5']
+    client_ids_to_get = ['test']
+    await asyncio.gather(*(get_client(grpc_stub, client_id) for client_id in client_ids_to_get))
 
-    # Update clients
-    clients_to_update = [
-        {'First name': 'John', 'Second name': 'Doe', 'phone': '555-1000'},
-        {'First name': 'Jane', 'Second name': 'Smith', 'phone': '555-2000'},
-        {'First name': 'Jim', 'Second name': 'Beam', 'phone': '555-3000'},
-        {'First name': 'Jack', 'Second name': 'Daniels', 'phone': '555-4000'},
-        {'First name': 'Jill', 'Second name': 'Valentine', 'phone': '555-5000'}
-    ]
-    await asyncio.gather(*(send_update_request(client) for client in clients_to_update))
-
-    # Get updated clients
-    await asyncio.gather(*(send_get_request(grpc_stub, client_id) for client_id in client_ids_to_get))
+    # # Update clients
+    # clients_to_update = [
+    #     {'first_name': 'John', 'second_name': 'Doe', 'phone': '555-1000'},
+    #     {'first_name': 'Jane', 'second_name': 'Smith', 'phone': '555-2000'},
+    #     {'first_name': 'Jim', 'second_name': 'Beam', 'phone': '555-3000'},
+    #     {'first_name': 'Jack', 'second_name': 'Daniels', 'phone': '555-4000'},
+    #     {'first_name': 'Jill', 'second_name': 'Valentine', 'phone': '555-5000'}
+    # ]
+    # await asyncio.gather(*(update_client(client) for client in clients_to_update))
+    #
+    # # Get updated clients
+    # await asyncio.gather(*(get_client(grpc_stub, client_id) for client_id in client_ids_to_get))
 
 
 if __name__ == "__main__":

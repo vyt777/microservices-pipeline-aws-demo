@@ -2,31 +2,41 @@ package main
 
 import (
     "context"
-    "fmt" 
+    "fmt"
     "log"
     "net"
+    "os"
+    "encoding/json"
 
     pb "grpc_server/proto"
     "github.com/aws/aws-sdk-go/aws"
+    "github.com/aws/aws-sdk-go/aws/credentials"
     "github.com/aws/aws-sdk-go/aws/session"
     "github.com/aws/aws-sdk-go/service/lambda"
     "google.golang.org/grpc"
 )
 
 type server struct {
-    pb.GetItemServiceServer
+    pb.GetClientServiceServer
     lambdaClient *lambda.Lambda
 }
 
-func (s *server) GetItem(ctx context.Context, in *pb.GetItemRequest) (*pb.GetItemResponse, error) {
-    itemID := in.GetItemId()
+type Client struct {
+    Id         string `json:"id"`
+    FirstName  string `json:"first_name"`
+    SecondName string `json:"second_name"`
+    Phone      string `json:"phone"`
+}
 
-    log.Printf("Received GetItem request for ID: %s", itemID)
+func (s *server) GetClient(ctx context.Context, in *pb.GetClientRequest) (*pb.GetClientResponse, error) {
+    clientID := in.GetId()
 
-    payload := fmt.Sprintf(`{"action": "get", "id": "%s"}`, itemID)
+    log.Printf("Received GetClient request for ID: %s", clientID)
+
+    payload := fmt.Sprintf(`{"action": "get_client", "id": "%s"}`, clientID)
 
     result, err := s.lambdaClient.Invoke(&lambda.InvokeInput{
-        FunctionName: aws.String("MyLambdaFunction"),
+        FunctionName: aws.String("ClientManagementFunction"),
         Payload:      []byte(payload),
     })
 
@@ -37,7 +47,19 @@ func (s *server) GetItem(ctx context.Context, in *pb.GetItemRequest) (*pb.GetIte
 
     log.Printf("Lambda function response: %s", string(result.Payload))
 
-    return &pb.GetItemResponse{ItemId: itemID, ItemName: string(result.Payload)}, nil
+    var client Client
+    err = json.Unmarshal(result.Payload, &client)
+    if err != nil {
+        log.Printf("Error unmarshaling Lambda response: %s", err)
+        return nil, err
+    }
+
+    return &pb.GetClientResponse{
+        Id:         client.Id,
+        FirstName:  client.FirstName,
+        SecondName: client.SecondName,
+        Phone:      client.Phone,
+    }, nil
 }
 
 func main() {
@@ -48,12 +70,17 @@ func main() {
 
     s := grpc.NewServer()
 
+    awsAccessKeyID := os.Getenv("AWS_ACCESS_KEY_ID")
+    awsSecretAccessKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+    awsRegion := os.Getenv("AWS_DEFAULT_REGION")
+
     sess := session.Must(session.NewSession(&aws.Config{
-        Region: aws.String("us-east-2"),
+        Region:      aws.String(awsRegion),
+        Credentials: credentials.NewStaticCredentials(awsAccessKeyID, awsSecretAccessKey, ""),
     }))
     lambdaClient := lambda.New(sess)
 
-    pb.RegisterGetItemServiceServer(s, &server{
+    pb.RegisterGetClientServiceServer(s, &server{
         lambdaClient: lambdaClient,
     })
 
