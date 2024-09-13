@@ -78,28 +78,45 @@ def get_client(client_id):
 
 def create_client(client_id, client_data):
     """Create client"""
-    # Save data in DynamoDB
-    table.put_item(Item={'id': client_id, **client_data})
+    try:
+        # Save data in DynamoDB
+        table.put_item(Item={'id': client_id, **client_data})
 
-    # Cache the data in Redis
-    redis_client.set(client_id, json.dumps(client_data))
-    redis_client.set(f"{client_id}:count", 1)
-    redis_client.expire(client_id, DEFAULT_TTL)
-    return {'status': 'success'}
+        # Cache the data in Redis
+        redis_client.set(client_id, json.dumps(client_data))
+        redis_client.set(f"{client_id}:count", 1)
+        redis_client.expire(client_id, DEFAULT_TTL)
+
+        return {'status': 'success'}
+
+    except Exception as e:
+        print(f"Error creating client in DynamoDB: {str(e)}")
+        return {'status': 'error', 'message': str(e)}
 
 
 def update_client(client_id, client_data):
     """Update client"""
-    # Update data in DynamoDB
-    table.update_item(
-        Key={'id': client_id},
-        UpdateExpression="set info=:i",
-        ExpressionAttributeValues={':i': client_data},
-        ReturnValues="UPDATED_NEW"
-    )
+    try:
+        # Update data in DynamoDB
+        table.update_item(
+            Key={'id': client_id},
+            UpdateExpression="set first_name=:f, second_name=:s, phone=:p",
+            ExpressionAttributeValues={
+                ':f': client_data['first_name'],
+                ':s': client_data['second_name'],
+                ':p': client_data['phone']
+            },
+            ReturnValues="UPDATED_NEW"
+        )
 
-    # Update data in cache
-    redis_client.set(client_id, json.dumps(client_data))
-    redis_client.delete(f"{client_id}:count")
-    redis_client.expire(client_id, DEFAULT_TTL)
-    return {'status': 'success'}
+        # Update data in cache
+        redis_client.set(client_id, json.dumps(client_data))
+        redis_client.set(f"{client_id}:count", 1)
+        redis_client.expire(client_id, DEFAULT_TTL)
+
+        return {'status': 'success'}
+
+    except Exception as e:
+        print(f"Error updating client in DynamoDB: {str(e)}")
+        return {'status': 'error', 'message': str(e)}
+

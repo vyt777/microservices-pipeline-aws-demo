@@ -8,4 +8,4 @@ microservices-pipeline-aws-demo-key-pair.pem
 app/py/venv
 app/py/__pycache__
 app/py/get_item_pb2.py
-app/py/get_item_pb2_grpc.py 
+app/py/get_item_pb2_grpc.py

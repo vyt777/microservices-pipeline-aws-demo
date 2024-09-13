@@ -119,7 +119,6 @@ docker build --build-arg AWS_ACCESS_KEY_ID=$(grep 'aws_access_key_id' ~/.aws/cre
              --build-arg AWS_SECRET_ACCESS_KEY=$(grep 'aws_secret_access_key' ~/.aws/credentials | awk '{print $3}') \
              --build-arg AWS_DEFAULT_REGION=$(grep 'region' ~/.aws/config | awk '{print $3}') \
              -t pipeline-aws-image . --progress=plain
-
 docker tag pipeline-aws-image denforlight/pipeline-aws-image:latest
 docker push denforlight/pipeline-aws-image:latest
 ```
@@ -184,6 +183,7 @@ Check Dynamodb tables from local PC
 ```bash
 aws dynamodb list-tables
 aws dynamodb describe-table --table-name Clients
+aws dynamodb scan --table-name Clients
 aws dynamodb put-item \
     --table-name Clients \
     --item '{
@@ -192,12 +192,14 @@ aws dynamodb put-item \
         "second_name": {"S": "Doe"},
         "phone": {"S": "555-1234"}
     }'
-aws dynamodb get-item     --table-name Clients     --key '{"id": {"S": "test"}}'
+aws dynamodb get-item     --table-name Clients     --key '{"id": {"S": "1"}}'
 ```
 Check Lambda from local PC
 ```bash
 aws lambda list-functions
-aws lambda invoke --function-name ClientManagementFunction --cli-binary-format raw-in-base64-out --payload '{"action": "get", "id": "test"}' /dev/stdout
+aws lambda invoke --function-name ClientManagementFunction --cli-binary-format raw-in-base64-out --payload '{"action": "get_client", "id": "1"}' /dev/stdout
+aws lambda invoke --function-name ClientManagementFunction --cli-binary-format raw-in-base64-out --payload '{"action": "create_client", "id": "test2", "client_data": {"first_name": "John", "second_name": "Doe", "phone": "555-1234"}}' /dev/stdout
+aws lambda invoke --function-name ClientManagementFunction --cli-binary-format raw-in-base64-out --payload '{"action": "update_client", "id": "test2", "client_data": {"first_name": "Terry", "second_name": "Doe", "phone": "555-3456"}}' /dev/stdout
 aws logs tail /aws/lambda/ClientManagementFunction --follow
 ```
 Check EC2 instances from local PC

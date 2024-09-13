@@ -1,17 +1,27 @@
 package main
 
 import (
+    "encoding/json"
     "fmt"
     "log"
+    "os"
 
     "github.com/confluentinc/confluent-kafka-go/kafka"
     "github.com/aws/aws-sdk-go/aws"
+    "github.com/aws/aws-sdk-go/aws/credentials"
     "github.com/aws/aws-sdk-go/aws/session"
     "github.com/aws/aws-sdk-go/service/lambda"
 )
 
-func main() {
+// Client struct to match the data format
+type Client struct {
+    ID         string `json:"id"`
+    FirstName  string `json:"first_name"`
+    SecondName string `json:"second_name"`
+    Phone      string `json:"phone"`
+}
 
+func main() {
     // Kafka configuration
     kafkaConfig := &kafka.ConfigMap{
         "bootstrap.servers": "localhost:9092",
@@ -29,9 +39,13 @@ func main() {
     // Subscribe to multiple topics
     consumer.SubscribeTopics([]string{"create_clients", "update_clients"}, nil)
 
-    // AWS Lambda configuration
+    // AWS Lambda configuration with credentials from environment variables
+    awsAccessKeyID := os.Getenv("AWS_ACCESS_KEY_ID")
+    awsSecretAccessKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+    awsRegion := os.Getenv("AWS_DEFAULT_REGION")
     sess := session.Must(session.NewSession(&aws.Config{
-        Region: aws.String("us-east-2"),
+        Region:      aws.String(awsRegion),
+        Credentials: credentials.NewStaticCredentials(awsAccessKeyID, awsSecretAccessKey, ""),
     }))
     lambdaSvc := lambda.New(sess)
 
@@ -48,26 +62,45 @@ func main() {
         // Log the received message and topic
         fmt.Printf("Received message from topic %s: %s\n", *msg.TopicPartition.Topic, string(msg.Value))
 
+        // Deserialize message into a Client struct
+        var client Client
+        err = json.Unmarshal(msg.Value, &client)
+        if err != nil {
+            log.Printf("Failed to unmarshal client data: %s", err)
+            continue
+        }
+
         // Process the message in a separate goroutine
-        go func(message *kafka.Message) {
+        go func(client Client, topic string) {
+            var action string
 
-            var lambdaFunctionName string
-
-            // Determine which Lambda function to call based on the topic
-            switch *message.TopicPartition.Topic {
+            // Determine which action to send to Lambda based on the topic
+            switch topic {
             case "create_clients":
-                lambdaFunctionName = "CreateClientLambdaFunction"
+                action = "create_client"
             case "update_clients":
-                lambdaFunctionName = "UpdateClientLambdaFunction"
+                action = "update_client"
             default:
-                log.Printf("Unknown topic: %s\n", *message.TopicPartition.Topic)
+                log.Printf("Unknown topic: %s\n", topic)
                 return
             }
 
-            // Prepare the input for the Lambda function
+            // Prepare the payload for the Lambda function
+            lambdaPayload := map[string]interface{}{
+                "action":      action,
+                "id":          client.ID,
+                "client_data": client,
+            }
+
+            payload, err := json.Marshal(lambdaPayload)
+            if err != nil {
+                log.Printf("Failed to marshal client for Lambda: %s", err)
+                return
+            }
+
             lambdaInput := &lambda.InvokeInput{
-                FunctionName: aws.String(lambdaFunctionName),
-                Payload:      message.Value,
+                FunctionName: aws.String("ClientManagementFunction"), // Using the single Lambda function
+                Payload:      payload,
             }
 
             // Invoke the Lambda function
@@ -80,6 +113,6 @@ func main() {
             // Log the response from the Lambda function
             fmt.Printf("Lambda response: %s\n", string(result.Payload))
 
-        }(msg)
+        }(client, *msg.TopicPartition.Topic)
     }
 }
