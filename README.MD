@@ -9,16 +9,48 @@ This demo project intentionally showcases a complex architecture to serve as a *
 ## Project Architecture
 
 ### Get Requests:
-- **Flow:** Python script gets Client item → gRPC Go service → AWS Lambda → Redis → DynamoDB/PostgreSQL (in AWS Cloud)
+```mermaid
+graph TD;
+    A[Python Script: Get Client] --> B[gRPC Go Service]
+    B --> C[AWS Lambda: Get Client Action]
+    C --> D[Redis Cache: Check if exists]
+    D -- Cache Hit --> C
+    D -- Cache Miss --> F[DynamoDB/PostgreSQL: Query Client]
+    F --> G[Update Redis Cache]
+    G --> C
+    C --> B
+    B --> A
+```
 
 ### Create/Update Requests:
-- **Flow:** Python script creates/updates Client item → Kafka → Go Subscriber → AWS Lambda → Redis → DynamoDB/PostgreSQL (in AWS Cloud)
+```mermaid
+graph TD;
+    A[Python Script: Create/Update Client] --> B[Kafka: Create/Update Topic]
+    B --> C[Go Subscriber]
+    C --> D[AWS Lambda: Create/Update Client Actions]
+    D --> E[Update Redis Cache]
+    E --> F[Update DynamoDB/PostgreSQL]
+```
+
+### CI/CD Flow:
+```mermaid
+graph TD;
+    A[Git Push to Master] --> B[GitHub Actions: Terraform Apply]
+    B --> C[GitHub Actions: Build Docker Image]
+    C --> D[Docker Hub: Push Image]
+    D --> E[AWS EC2: Pull Docker Image]
+    E --> F[AWS EC2: Run Docker Container]
+    F --> G[Run Tests in Docker Container in AWS Cloud]
+    G --> H[Create Test Report]
+    H --> I[Clean up AWS Cloud: Stop/Remove Docker container and image]
+```
 
 ### Example Client Data:
 ```json
 {
-    "First name": "John",
-    "Second name": "Doe",
+    "id": "1",
+    "first_name": "John",
+    "second_name": "Doe",
     "phone": "555-1234"
 }
 ```

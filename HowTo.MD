@@ -3,14 +3,14 @@
 ### Docker Commands
 #### Create Docker image
 ```bash
-sudo docker build -t pipeline-aws-image .
-sudo docker build -t pipeline-aws-image . --progress=plain --no-cache
+docker build -t pipeline-aws-image .
+docker build -t pipeline-aws-image . --progress=plain --no-cache
 docker stop pipeline-aws-container; docker rm pipeline-aws-container; sudo docker build -t pipeline-aws-image . --progress=plain
 ```
 
 #### Run Docker Container
 ```bash
-sudo docker run --env-file app/.env \
+docker run --env-file app/.env \
   -v ~/.aws:/root/.aws \
   -d --name pipeline-aws-container pipeline-aws-image
 docker logs pipeline-aws-container
