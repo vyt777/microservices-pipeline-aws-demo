@@ -7,29 +7,47 @@ This project demonstrates a microservices architecture pipeline for managing cli
 This demo project intentionally showcases a complex architecture to serve as a **framework** or an **example** for building scalable, high-load, and maintainable microservices applications. While a simple client data storage task (used in this project) could be done with a single Python service and a local DynamoDB/PostgreSQL setup, this project illustrates how microservices interact with distributed components, offering a reusable skeleton for more advanced features such as authentication, analytics, and additional services.
 
 ## Project Architecture
-
 ### Get Requests:
 ```mermaid
 graph TD;
-    A[Python Script: Get Client] --> B[gRPC Go Service]
-    B --> C[AWS Lambda: Get Client Action]
-    C --> D[Redis Cache: Check if exists]
-    D -- Cache Hit --> C
-    D -- Cache Miss --> F[DynamoDB/PostgreSQL: Query Client]
-    F --> G[Update Redis Cache]
-    G --> C
-    C --> B
-    B --> A
+  subgraph Docker container in EC2 instance
+    A[Python Test Script]
+    B[gRPC Go Service]
+    D[Redis Cache]
+  end
+  subgraph AWS cloud services
+    C[AWS Lambda]
+    E[DynamoDB]
+  end
+    A -- **1** Get Client Data --> B
+    B -- **2** Get Client Action --> C
+    C -- **3** Check If Client Data Exists --> D
+    D -- **4 Cache Hit,** Return Client Data --> C
+    C -- **4.0 Cache Miss,** Get Client Item --> E
+    E -- **4.1** Return Client Data --> C
+    C -- **4.2** Update Redis Cache With Client Data --> D
+    C -- **5** Return Client Data --> B
+    B -- **6** Return Client Data --> A
 ```
 
 ### Create/Update Requests:
 ```mermaid
 graph TD;
-    A[Python Script: Create/Update Client] --> B[Kafka: Create/Update Topic]
-    B --> C[Go Subscriber]
-    C --> D[AWS Lambda: Create/Update Client Actions]
-    D --> E[Update Redis Cache]
-    E --> F[Update DynamoDB/PostgreSQL]
+  subgraph Docker container in EC2 instance
+    A[Python Test Script]
+    B[Kafka]
+    C[Kafka Go Subscriber]
+    E[Redis Cache]
+  end
+  subgraph AWS cloud services
+    D[AWS Lambda]
+    F[DynamoDB]
+  end
+    A -- **1** Create/Update Client --> B
+    B -- **2** Create/Update Client Topic --> C
+    C -- **3** Create/Update Client Actions --> D
+    D -- **4** Update Redis Cache With Client Data --> E
+    D -- **5** Put/Update Client Item --> F
 ```
 
 ### CI/CD Flow:
