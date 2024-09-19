@@ -100,6 +100,20 @@ jobs:
         env:
           EC2_IP: ${{ secrets.EC2_IP }}
 
+      - name: Move HTML Report to GitHub Pages root
+        run: mv ./test-reports/report.html ./report.html
+
+      - name: Commit and Push HTML Test Report to gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git checkout -B gh-pages
+          git add ./report.html
+          git commit -m "Update HTML test report"
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} gh-pages --force
+
       - name: Clean up Docker containers (after tests)
         if: always()
         run: make docker-clean-ec2

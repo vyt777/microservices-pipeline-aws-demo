@@ -8,3 +8,4 @@ app/py/venv
 app/py/__pycache__
 app/py/get_item_pb2.py
 app/py/get_item_pb2_grpc.py
+etc

@@ -1,5 +1,9 @@
 # Microservices Pipeline AWS Demo
 
+![Test Status](https://github.com/vyt777/microservices-pipeline-aws-demo/actions/workflows/ci-cd.yml/badge.svg)
+
+[Test Report](https://vyt777.github.io/microservices-pipeline-aws-demo/report.html)
+
 ## Project Overview
 This project demonstrates a microservices architecture pipeline for managing client data using technologies like Python, Go, Kafka, gRPC, AWS Lambda, Redis, PostgreSQL, and DynamoDB. The core functionality involves handling and storing client information in AWS DynamoDB and PostgreSQL, leveraging a variety of modern tools with Terraform for AWS EC2 deployment (t2.micro). CI/CD is managed through GitHub Actions.
 
@@ -55,14 +59,31 @@ graph TD;
 ### CI/CD Flow:
 ```mermaid
 graph TD;
-    A[Git Push to Master] --> B[GitHub Actions: Terraform Apply]
-    B --> C[GitHub Actions: Build Docker Image]
-    C --> D[Docker Hub: Push Image]
-    D --> E[AWS EC2: Pull Docker Image]
-    E --> F[AWS EC2: Run Docker Container]
-    F --> G[Run Tests in Docker Container in AWS Cloud]
-    G --> H[Create Test Report]
-    H --> I[Clean up AWS Cloud: Stop/Remove Docker container and image]
+  subgraph trigger
+    A[Git Push to Master]
+  end
+  subgraph terraform job
+    B[GitHub Actions: Terraform Setup AWS Lambda, DynamoDB, Routing]
+  end
+  subgraph build-and-push-docker job
+    C[Build Docker Image With Services]
+    D[Push Docker Image To Docker Hub]
+  end
+  subgraph deploy-and-test-aws job
+    E[AWS EC2: Pull Docker Image]
+    F[AWS EC2: Run Docker Container]
+    G[AWS EC2: Run Tests in Docker Container]
+    H[Create Test Report]
+    I[Clean up AWS Cloud: Stop/Remove Docker container and image]
+  end
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
 ```
 
 ### Example Client Data:

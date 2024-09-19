@@ -49,26 +49,35 @@ deploy-docker-ec2:
 	set -e
 	ssh -o StrictHostKeyChecking=no $(EC2_USER)@$(EC2_IP) \
 		"docker pull $(DOCKER_HUB_USER)/$(DOCKER_IMAGE):latest && \
-		docker stop $(DOCKER_CONTAINER) || true && \
-		docker rm $(DOCKER_CONTAINER) || true && \
-		docker run -d -p 6379:6379 --name $(DOCKER_CONTAINER) $(DOCKER_HUB_USER)/$(DOCKER_IMAGE):latest &&\
+		docker run -d -p 6379:6379 --name $(DOCKER_CONTAINER) $(DOCKER_HUB_USER)/$(DOCKER_IMAGE):latest && \
 		sleep 30"
 
-# Run tests in Docker container on EC2
+# Run tests in Docker container on EC2 and save Pytest report
 run-tests-ec2:
 	set -e
+    # Run tests inside the container with debugging output, generate HTML report, and continue even if tests fail
 	ssh -o StrictHostKeyChecking=no $(EC2_USER)@$(EC2_IP) \
-		"docker exec $(DOCKER_CONTAINER) bash -c 'python3 /app/py/clear_dynamodb.py && python3 /app/py/test.py'"
-		  
-# Clean up Docker containers on EC2
+		"docker exec -t $(DOCKER_CONTAINER) bash -c 'set +e; \
+		pytest -s --capture=tee-sys --asyncio-mode=auto \
+		--html=/app/py/test-reports/report.html --self-contained-html /app/py/tests.py; set -e'"
+	# Copy the HTML report back from the Docker container to the local machine
+	ssh -o StrictHostKeyChecking=no $(EC2_USER)@$(EC2_IP) \
+		"docker cp $(DOCKER_CONTAINER):/app/py/test-reports/report.html /home/$(EC2_USER)/report.html"
+	# Ensure the local directory for reports exists
+	mkdir -p ./test-reports
+	# Copy the report from the EC2 instance to the local machine (Github Actions Instance)
+	scp $(EC2_USER)@$(EC2_IP):/home/$(EC2_USER)/report.html ./test-reports/report.html || true
+
+
+# Clean up Docker containers on EC2 (save the AWS computing power)
 docker-clean-ec2:
 	set -e
 	echo "$$EC2_SSH_KEY" > /tmp/ssh_key.pem && \
 	chmod 600 /tmp/ssh_key.pem && \
 	ssh -i /tmp/ssh_key.pem -o StrictHostKeyChecking=no $(EC2_USER)@$(EC2_IP) \
-		"docker stop $(DOCKER_CONTAINER) && \
-		docker rm $(DOCKER_CONTAINER) && \
-		docker rmi $(docker images -q) || true" && \
+		"docker stop $(DOCKER_CONTAINER) || true && \
+		docker rm $(DOCKER_CONTAINER) || true && \
+		docker rmi \$$(docker images -q) || true" ; \
 	rm -f /tmp/ssh_key.pem
 
 # Full build, deploy and test process

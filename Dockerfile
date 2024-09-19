@@ -42,7 +42,7 @@ ENV GO111MODULE=on
 ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin:$GOROOT/bin
 
 # Install pip dependencies
-RUN pip3 --timeout=100 install boto3 confluent-kafka grpcio grpcio-tools
+RUN pip3 --timeout=100 install boto3 confluent-kafka grpcio grpcio-tools unittest-xml-reporting pytest pytest-asyncio pytest-html
 
 # Install Kafka
 ENV KAFKA_VERSION=3.8.0
