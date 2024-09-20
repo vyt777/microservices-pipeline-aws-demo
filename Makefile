@@ -23,6 +23,32 @@ terraform-apply:
 		echo "No changes in Lambda source code. ZIP not updated."; \
 	fi && \
     terraform init && \
+    terraform refresh && \
+    if ! terraform state show aws_iam_role.lambda_exec > /dev/null 2>&1; then \
+      terraform import aws_iam_role.lambda_exec lambda_exec_role; \
+    fi && \
+    if ! terraform state show aws_dynamodb_table.clients > /dev/null 2>&1; then \
+      terraform import aws_dynamodb_table.clients Clients; \
+    fi && \
+    if ! terraform state show aws_vpc_endpoint.dynamodb_gateway > /dev/null 2>&1; then \
+      terraform import aws_vpc_endpoint.dynamodb_gateway vpce-0821588255b515ba1; \
+    fi && \
+    if ! terraform state show aws_iam_role_policy.lambda_vpc_access_policy > /dev/null 2>&1; then \
+      terraform import aws_iam_role_policy.lambda_vpc_access_policy lambda_exec_role:lambda_vpc_access_policy; \
+    fi && \
+    if ! terraform state show aws_iam_role_policy_attachment.lambda_dynamodb_access > /dev/null 2>&1; then \
+      terraform import aws_iam_role_policy_attachment.lambda_dynamodb_access lambda_exec_role/arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess; \
+    fi && \
+    if ! terraform state show aws_iam_role_policy_attachment.lambda_policy_attachment > /dev/null 2>&1; then \
+      terraform import aws_iam_role_policy_attachment.lambda_policy_attachment lambda_exec_role/arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole; \
+    fi && \
+    if ! terraform state show aws_instance.redis_instance > /dev/null 2>&1; then \
+      terraform import aws_instance.redis_instance i-03e43a709b7bdca03; \
+    fi && \
+    if ! terraform state show aws_lambda_function.client_lambda > /dev/null 2>&1; then \
+      terraform state rm aws_lambda_function.client_lambda || true && \
+      terraform import aws_lambda_function.client_lambda ClientManagementFunction || echo "Lambda function does not exist in the cloud. Skipping import."; \
+    fi && \
     terraform plan && \
     terraform apply -auto-approve
 
