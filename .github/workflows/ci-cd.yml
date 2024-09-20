@@ -11,12 +11,21 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
+      with:
+        clean: false
 
     - name: Restore Terraform state from cache
       uses: actions/cache@v3
       with:
         path: app/terraform.tfstate
-        key: terraform-state
+        key: terraform-state-Linux
+        fail-on-cache-miss: false
+
+    - name: Show Lambda function state
+      run: |
+        cd ./app/
+        terraform init
+        terraform state show aws_lambda_function.client_lambda || true
 
     - name: Terraform Init and Apply
       env:
@@ -29,7 +38,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: app/terraform.tfstate
-        key: terraform-state
+        key: terraform-state-${{ runner.os }}-${{ hashFiles('app/terraform.tfstate') }}
 
   build-and-push-docker:
     runs-on: ubuntu-latest
